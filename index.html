@@ -3,76 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Rhythm - Admin Edition</title>
+    <title>Geometry Rhythm - STABLE EDITION</title>
     <style>
-        :root { --primary: #00ffcc; --gold: #ffcc00; --admin: #ff0000; }
-        * { box-sizing: border-box; user-select: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
+        :root { --primary: #00ffcc; --admin: #ff0000; }
+        * { box-sizing: border-box; user-select: none; touch-action: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
         canvas { display: block; }
-        
-        /* UI PRINCIPALE */
-        #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.85); z-index: 100; color: white; }
-        .container { text-align: center; padding: 20px; border: 4px solid var(--primary); border-radius: 30px; background: #0a0a0a; width: 90%; max-width: 450px; }
-        
-        .shop { background: #151515; padding: 10px; border-radius: 15px; border: 1px solid #333; margin: 10px 0; }
-        .power-btn { background: #222; border: 1px solid #444; color: white; padding: 8px; border-radius: 8px; width: 100%; margin-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; font-family: inherit; }
-        .power-btn.owned { border-color: #ff4400; color: #ff4400; }
 
-        button#playBtn { padding: 15px; font-size: 22px; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; width: 100%; box-shadow: 0 4px 0 #008877; }
+        /* INTERFACE PRINCIPALE */
+        #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); z-index: 100; color: white; }
+        .menu { text-align: center; background: #111; padding: 30px; border: 3px solid var(--primary); border-radius: 20px; width: 320px; }
+        button { width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 18px; }
+        #startBtn { background: var(--primary); color: #000; }
 
         /* PANEL ADMIN */
-        #adminToggle { position: absolute; bottom: 10px; right: 10px; opacity: 0.3; cursor: pointer; font-size: 20px; z-index: 200; }
+        #adminToggle { position: absolute; bottom: 15px; right: 15px; z-index: 200; font-size: 24px; opacity: 0.5; cursor: pointer; }
         #adminPanel { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #111; border: 2px solid var(--admin); padding: 20px; border-radius: 20px;
-            display: none; z-index: 300; width: 300px; color: white; box-shadow: 0 0 30px rgba(255,0,0,0.5);
+            background: #1a0000; border: 2px solid var(--admin); padding: 20px; border-radius: 15px;
+            display: none; z-index: 300; width: 280px; color: white;
         }
-        .admin-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px; }
-        .admin-btn { background: var(--admin); border: none; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
-
-        #stats { position: absolute; top: 20px; left: 20px; color: white; font-size: 18px; z-index: 50; }
+        .admin-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        
+        #stats { position: absolute; top: 15px; left: 15px; color: white; font-size: 18px; z-index: 50; }
     </style>
 </head>
 <body>
 
-<div id="stats">🪙 <span id="coinTotal">0</span> <span id="godTag" style="color:red; display:none; margin-left:10px;">[GOD MODE]</span></div>
-
-<div id="adminToggle" onclick="toggleAdmin()">⚙️</div>
+<div id="stats">🪙 PIÈCES: <span id="coinTotal">0</span></div>
+<div id="adminToggle">⚙️</div>
 
 <div id="adminPanel">
-    <h2 style="color:var(--admin); margin-top:0;">ADMIN PANEL</h2>
+    <h3 style="color:red; margin-top:0;">ADMIN PANEL</h3>
     <div class="admin-row">
         <span>GOD MODE</span>
-        <input type="checkbox" id="godModeCheck" onchange="setGodMode(this.checked)">
+        <input type="checkbox" id="godCheck">
     </div>
     <div class="admin-row">
         <span>PIÈCES</span>
-        <button class="admin-btn" onclick="addCoins(1000)">+1000</button>
+        <button onclick="addAdminCoins()" style="padding:5px; font-size:12px; width:auto;">+1000</button>
     </div>
     <div class="admin-row">
-        <span>MODE</span>
-        <button class="admin-btn" onclick="setMode('ship')">SHIP</button>
-        <button class="admin-btn" onclick="setMode('cube')">CUBE</button>
+        <span>SAUT</span>
+        <input type="range" id="gravRange" min="10" max="30" value="16">
     </div>
-    <div class="admin-row">
-        <span>GRAVITÉ</span>
-        <input type="range" min="5" max="30" value="16" oninput="setGravity(this.value)">
-    </div>
-    <button style="width:100%; padding:10px; background:#444; color:white; border:none; border-radius:10px;" onclick="toggleAdmin()">FERMER</button>
+    <button onclick="closeAdmin()" style="background:#333; color:white;">FERMER</button>
 </div>
 
 <div id="ui">
-    <div class="container">
-        <h1>RHYTHM CRASH</h1>
-        <div class="shop">
-            <button class="power-btn" id="buyJump" onclick="buyPower('jump')"><span>🔥 SAUT FEU</span><span id="p1">50 🪙</span></button>
-            <button class="power-btn" id="buySpeed" onclick="buyPower('speed')"><span>⚡ BOOST</span><span id="p2">80 🪙</span></button>
-        </div>
-        <select id="levelSelect" style="width:100%; padding:10px; margin-bottom:10px; background:#222; color:white; border-radius:10px;">
-            <option value="moyen">Difficulté : NORMAL</option>
-            <option value="impossible">Difficulté : HARDCORE</option>
-        </select>
-        <button id="playBtn">START</button>
+    <div class="menu">
+        <h1 style="color:var(--primary)">GEO-DASH</h1>
+        <p>Cliquez pour sauter</p>
+        <button id="startBtn">JOUER</button>
     </div>
 </div>
 
@@ -81,147 +63,143 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
 
-// Données
-let totalCoins = parseInt(localStorage.getItem("geoCoins")) || 0;
-let powers = JSON.parse(localStorage.getItem("geoPowers")) || { jump: false, speed: false };
-let isAdminMode = false;
+// États du jeu
+let isPlaying = false;
+let isPressing = false;
+let score = 0;
+let coins = parseInt(localStorage.getItem("coins")) || 0;
+let obstacles = [];
+let nextSpawn = 0;
 let godMode = false;
 
-let isPlaying = false, isPressing = false, score = 0, currentCoins = 0;
-let obstacles = [], goldCoins = [], nextSpawn = 0;
-
+// Joueur
 let player = {
-    x: 150, y: 0, size: 40, vy: 0, gravity: 0.9, jumpForce: -16, 
-    rot: 0, color: "#00ffcc", mode: "cube", grounded: false
+    x: 100, y: 0, size: 40, vy: 0,
+    gravity: 0.9, jumpPower: -16, grounded: false
 };
 
-// --- FONCTIONS ADMIN ---
-function toggleAdmin() {
-    isAdminMode = !isAdminMode;
-    document.getElementById("adminPanel").style.display = isAdminMode ? "block" : "none";
-}
-function addCoins(val) {
-    totalCoins += val;
-    save(); updateUI();
-}
-function setGodMode(val) {
-    godMode = val;
-    document.getElementById("godTag").style.display = val ? "inline" : "none";
-}
-function setMode(m) { player.mode = m; }
-function setGravity(v) { player.jumpForce = -v; }
-
-// --- LOGIQUE JEU ---
-function updateUI() {
-    document.getElementById("coinTotal").innerText = totalCoins;
-    document.getElementById("buyJump").classList.toggle("owned", powers.jump);
-    document.getElementById("buySpeed").classList.toggle("owned", powers.speed);
-}
-function save() {
-    localStorage.setItem("geoCoins", totalCoins);
-    localStorage.setItem("geoPowers", JSON.stringify(powers));
-}
-function buyPower(type) {
-    if(type === 'jump' && totalCoins >= 50 && !powers.jump) { totalCoins -= 50; powers.jump = true; }
-    if(type === 'speed' && totalCoins >= 80 && !powers.speed) { totalCoins -= 80; powers.speed = true; }
-    save(); updateUI();
+// Initialisation
+function init() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    groundY = canvas.height - 100;
+    player.y = groundY - player.size;
+    document.getElementById("coinTotal").innerText = coins;
 }
 
-updateUI();
+window.onresize = init;
+init();
 
-// Resize
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; groundY = canvas.height - 100; ceilingY = 100; }
-window.addEventListener('resize', resize);
-resize();
-
-// Inputs
+// --- COMMANDES ---
 function jump() {
-    if (isPlaying && player.grounded && player.mode === "cube") {
-        let f = powers.jump ? player.jumpForce * 1.2 : player.jumpForce;
-        player.vy = f; player.grounded = false;
+    if (isPlaying && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
     }
 }
-window.onmousedown = () => { isPressing = true; jump(); };
-window.onmouseup = () => isPressing = false;
-window.onkeydown = (e) => { if(e.code === "Space") { isPressing = true; jump(); } };
 
-document.getElementById('playBtn').onclick = () => {
-    isPlaying = true; score = 0; currentCoins = 0; obstacles = []; goldCoins = [];
-    player.y = groundY - player.size; player.vy = 0;
-    ui.style.display = "none";
+window.addEventListener("mousedown", () => { isPressing = true; jump(); });
+window.addEventListener("mouseup", () => isPressing = false);
+window.addEventListener("touchstart", (e) => { isPressing = true; jump(); e.preventDefault(); }, {passive: false});
+window.addEventListener("touchend", () => isPressing = false);
+window.addEventListener("keydown", (e) => { if(e.code === "Space") jump(); });
+
+// --- ADMIN FUNCTIONS ---
+const adminToggle = document.getElementById("adminToggle");
+const adminPanel = document.getElementById("adminPanel");
+const godCheck = document.getElementById("godCheck");
+const gravRange = document.getElementById("gravRange");
+
+adminToggle.onclick = () => adminPanel.style.display = "block";
+function closeAdmin() { adminPanel.style.display = "none"; }
+function addAdminCoins() { 
+    coins += 1000; 
+    localStorage.setItem("coins", coins);
+    document.getElementById("coinTotal").innerText = coins;
+}
+
+// --- BOUCLE DE JEU ---
+document.getElementById("startBtn").onclick = () => {
+    isPlaying = true;
+    score = 0;
+    obstacles = [];
+    player.y = groundY - player.size;
+    player.vy = 0;
+    document.getElementById("ui").style.display = "none";
 };
 
 function update() {
     if (!isPlaying) return;
-    let speed = powers.speed ? 14 : 10;
 
-    if (player.mode === "ship") {
-        player.vy += (isPressing ? -0.8 : 0.8);
-        player.vy *= 0.95;
-    } else {
-        player.vy += player.gravity;
-        if(!player.grounded) player.rot += 7;
-    }
+    // Admin Settings
+    godMode = godCheck.checked;
+    player.jumpPower = -parseInt(gravRange.value);
+
+    // Physique
+    player.vy += player.gravity;
     player.y += player.vy;
 
-    if (player.y >= groundY - player.size) {
-        player.y = groundY - player.size; player.vy = 0; player.grounded = true;
-        player.rot = Math.round(player.rot/90)*90;
-    } else player.grounded = false;
+    if (player.y > groundY - player.size) {
+        player.y = groundY - player.size;
+        player.vy = 0;
+        player.grounded = true;
+    }
 
-    // Mort (Désactivée si God Mode)
-    if ((player.y < ceilingY || player.y > groundY) && !godMode) gameOver();
-
-    // Spawn
+    // Obstacles
     if (nextSpawn-- <= 0) {
-        obstacles.push({x: canvas.width, w: 32, h: 38});
-        if(Math.random() > 0.5) goldCoins.push({x: canvas.width + 100, y: groundY - 120});
+        obstacles.push({ x: canvas.width, w: 30, h: 40 });
         nextSpawn = 60 + Math.random() * 40;
     }
 
-    // Collisions
-    obstacles.forEach((o, i) => {
-        o.x -= speed;
-        if(player.x < o.x + o.w && player.x + player.size > o.x && player.y + player.size > groundY - o.h) {
-            if(!godMode) gameOver();
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let o = obstacles[i];
+        o.x -= 10;
+
+        // Collision
+        if (player.x < o.x + o.w && player.x + player.size > o.x && 
+            player.y + player.size > groundY - o.h) {
+            if (!godMode) {
+                isPlaying = false;
+                document.getElementById("ui").style.display = "flex";
+            }
         }
-    });
-
-    goldCoins.forEach((c, i) => {
-        c.x -= speed;
-        if(player.x < c.x + 20 && player.x + player.size > c.x && Math.abs(player.y - c.y) < 50) {
-            currentCoins++; goldCoins.splice(i, 1);
-        }
-    });
-
-    score++;
-}
-
-function gameOver() {
-    isPlaying = false;
-    totalCoins += currentCoins;
-    save(); updateUI();
-    ui.style.display = "flex";
+        if (o.x < -50) obstacles.splice(i, 1);
+    }
 }
 
 function draw() {
-    ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#111"; ctx.fillRect(0, groundY, canvas.width, 100);
-    ctx.strokeStyle = player.color; ctx.strokeRect(0, groundY, canvas.width, 2);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "#ffcc00"; goldCoins.forEach(c => { ctx.beginPath(); ctx.arc(c.x, c.y, 10, 0, Math.PI*2); ctx.fill(); });
-    ctx.fillStyle = "#ff0055"; obstacles.forEach(o => { ctx.beginPath(); ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+16, groundY-o.h); ctx.lineTo(o.x+32, groundY); ctx.fill(); });
+    // Sol
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, groundY, canvas.width, 100);
+    ctx.strokeStyle = "#00ffcc";
+    ctx.strokeRect(0, groundY, canvas.width, 2);
 
-    ctx.save();
-    ctx.translate(player.x+player.size/2, player.y+player.size/2); ctx.rotate(player.rot*Math.PI/180);
-    ctx.fillStyle = player.color; ctx.fillRect(-20, -20, 40, 40);
-    if(godMode) { ctx.strokeStyle = "red"; ctx.lineWidth = 3; ctx.strokeRect(-22, -22, 44, 44); }
-    ctx.restore();
+    // Obstacles (Piques)
+    ctx.fillStyle = "red";
+    obstacles.forEach(o => {
+        ctx.beginPath();
+        ctx.moveTo(o.x, groundY);
+        ctx.lineTo(o.x + o.w/2, groundY - o.h);
+        ctx.lineTo(o.x + o.w, groundY);
+        ctx.fill();
+    });
 
-    update(); requestAnimationFrame(draw);
+    // Joueur
+    ctx.fillStyle = "#00ffcc";
+    if (godMode) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "red";
+    }
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+    ctx.shadowBlur = 0;
+
+    update();
+    requestAnimationFrame(draw);
 }
+
 draw();
 </script>
 </body>
