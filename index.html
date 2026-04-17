@@ -3,58 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Rhythm - STABLE EDITION</title>
+    <title>Geometry Rhythm - Shop Edition</title>
     <style>
-        :root { --primary: #00ffcc; --admin: #ff0000; }
-        * { box-sizing: border-box; user-select: none; touch-action: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        :root { --primary: #00ffcc; --gold: #ffcc00; --fire: #ff4400; }
+        * { box-sizing: border-box; user-select: none; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
         canvas { display: block; }
-
-        /* INTERFACE PRINCIPALE */
-        #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); z-index: 100; color: white; }
-        .menu { text-align: center; background: #111; padding: 30px; border: 3px solid var(--primary); border-radius: 20px; width: 320px; }
-        button { width: 100%; padding: 15px; margin-top: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; font-size: 18px; }
-        #startBtn { background: var(--primary); color: #000; }
-
-        /* PANEL ADMIN */
-        #adminToggle { position: absolute; bottom: 15px; right: 15px; z-index: 200; font-size: 24px; opacity: 0.5; cursor: pointer; }
-        #adminPanel { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #1a0000; border: 2px solid var(--admin); padding: 20px; border-radius: 15px;
-            display: none; z-index: 300; width: 280px; color: white;
-        }
-        .admin-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
         
-        #stats { position: absolute; top: 15px; left: 15px; color: white; font-size: 18px; z-index: 50; }
+        #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 100; color: white; }
+        .container { text-align: center; padding: 20px; border: 4px solid var(--primary); border-radius: 30px; background: #0a0a0a; width: 90%; max-width: 500px; }
+        
+        .row { margin: 12px 0; }
+        .selection-grid { display: flex; gap: 8px; justify-content: center; }
+        .item { width: 45px; height: 45px; border-radius: 10px; cursor: pointer; border: 2px solid #333; display: flex; align-items: center; justify-content: center; background: #1a1a1a; font-size: 20px; }
+        .item.active { border-color: #fff; background: var(--primary); color: #000; }
+        
+        /* SHOP STYLE */
+        .shop { background: #151515; padding: 15px; border-radius: 20px; border: 1px solid #333; margin: 15px 0; }
+        .shop-title { color: var(--gold); font-size: 14px; margin-bottom: 10px; letter-spacing: 1px; }
+        .power-btn { background: #222; border: 2px solid #444; color: white; padding: 10px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 8px; font-family: inherit; transition: 0.2s; }
+        .power-btn.owned { border-color: var(--fire); color: var(--fire); }
+        .power-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        button#playBtn { padding: 18px; font-size: 24px; font-weight: 900; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; color: #000; width: 100%; box-shadow: 0 5px 0 #008877; }
+        
+        #stats { position: absolute; top: 20px; left: 20px; color: white; font-size: 20px; z-index: 50; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--gold); }
     </style>
 </head>
 <body>
 
-<div id="stats">🪙 PIÈCES: <span id="coinTotal">0</span></div>
-<div id="adminToggle">⚙️</div>
-
-<div id="adminPanel">
-    <h3 style="color:red; margin-top:0;">ADMIN PANEL</h3>
-    <div class="admin-row">
-        <span>GOD MODE</span>
-        <input type="checkbox" id="godCheck">
-    </div>
-    <div class="admin-row">
-        <span>PIÈCES</span>
-        <button onclick="addAdminCoins()" style="padding:5px; font-size:12px; width:auto;">+1000</button>
-    </div>
-    <div class="admin-row">
-        <span>SAUT</span>
-        <input type="range" id="gravRange" min="10" max="30" value="16">
-    </div>
-    <button onclick="closeAdmin()" style="background:#333; color:white;">FERMER</button>
-</div>
+<div id="stats">🪙 <span id="coinTotal">0</span></div>
 
 <div id="ui">
-    <div class="menu">
-        <h1 style="color:var(--primary)">GEO-DASH</h1>
-        <p>Cliquez pour sauter</p>
-        <button id="startBtn">JOUER</button>
+    <div class="container">
+        <h1 style="margin:0; font-size: 24px;">RHYTHM SHOP</h1>
+        
+        <div class="shop">
+            <div class="shop-title">MAGASIN DE POUVOIRS</div>
+            <button class="power-btn" id="buyJump" onclick="buyPower('jump')">
+                <span>🔥 SAUT DE FEU (Saut +20%)</span>
+                <span id="priceJump">50 🪙</span>
+            </button>
+            <button class="power-btn" id="buySpeed" onclick="buyPower('speed')">
+                <span>⚡ MODE BOOST (Vitesse +)</span>
+                <span id="priceSpeed">80 🪙</span>
+            </button>
+        </div>
+
+        <div class="row">
+            <select id="levelSelect" style="width:100%; padding:10px; border-radius:10px; background:#222; color:white; border:1px solid #444; font-family:inherit;">
+                <option value="facile">NIVEAU : FACILE</option>
+                <option value="moyen" selected>NIVEAU : MOYEN</option>
+                <option value="difficile">NIVEAU : DIFFICILE</option>
+            </select>
+        </div>
+
+        <div class="selection-grid" id="faceSelector" style="margin-bottom: 15px;">
+            <div class="item active" data-face="normal">🙂</div>
+            <div class="item" data-face="angry">😠</div>
+            <div class="item" data-face="cool">😎</div>
+            <div class="item" data-face="wow">😲</div>
+        </div>
+        
+        <button id="playBtn">JOUER</button>
     </div>
 </div>
 
@@ -63,144 +74,182 @@
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
 
-// États du jeu
-let isPlaying = false;
-let isPressing = false;
-let score = 0;
-let coins = parseInt(localStorage.getItem("coins")) || 0;
-let obstacles = [];
-let nextSpawn = 0;
-let godMode = false;
+// --- SAUVEGARDE ET DONNÉES ---
+let totalCoins = parseInt(localStorage.getItem("geoCoins")) || 0;
+let powers = JSON.parse(localStorage.getItem("geoPowers")) || { jump: false, speed: false };
 
-// Joueur
+let isPlaying = false, isPressing = false;
+let score = 0, currentCoins = 0, speedBase = 10, nextSpawn = 0;
+let obstacles = [], portals = [], pillars = [], goldCoins = [], fireParticles = [];
+
 let player = {
-    x: 100, y: 0, size: 40, vy: 0,
-    gravity: 0.9, jumpPower: -16, grounded: false
+    x: 180, y: 0, size: 40, vy: 0, gravity: 0.95, 
+    jumpBase: -16.5, rot: 0, color: "#00ffcc", face: "normal", mode: "cube", grounded: false
 };
 
-// Initialisation
-function init() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    groundY = canvas.height - 100;
-    player.y = groundY - player.size;
-    document.getElementById("coinTotal").innerText = coins;
+function updateUI() {
+    document.getElementById("coinTotal").innerText = totalCoins;
+    const btnJ = document.getElementById("buyJump");
+    const btnS = document.getElementById("buySpeed");
+    
+    if(powers.jump) { btnJ.innerHTML = "🔥 SAUT DE FEU ACTIVÉ"; btnJ.classList.add("owned"); }
+    if(powers.speed) { btnS.innerHTML = "⚡ MODE BOOST ACTIVÉ"; btnS.classList.add("owned"); }
+    
+    btnJ.disabled = (totalCoins < 50 && !powers.jump);
+    btnS.disabled = (totalCoins < 80 && !powers.speed);
 }
 
-window.onresize = init;
-init();
+function buyPower(type) {
+    if(type === 'jump' && totalCoins >= 50 && !powers.jump) {
+        totalCoins -= 50; powers.jump = true;
+    } else if(type === 'speed' && totalCoins >= 80 && !powers.speed) {
+        totalCoins -= 80; powers.speed = true;
+    }
+    localStorage.setItem("geoCoins", totalCoins);
+    localStorage.setItem("geoPowers", JSON.stringify(powers));
+    updateUI();
+}
 
-// --- COMMANDES ---
-function jump() {
-    if (isPlaying && player.grounded) {
-        player.vy = player.jumpPower;
-        player.grounded = false;
+updateUI();
+
+function resize() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    groundY = canvas.height - 100; ceilingY = 100;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// --- CONTROLES ---
+function triggerJump() {
+    if (isPlaying && player.grounded && player.mode === "cube") {
+        let jumpForce = powers.jump ? player.jumpBase * 1.2 : player.jumpBase;
+        player.vy = jumpForce; player.grounded = false;
+        if(powers.jump) createFireEffect(player.x, player.y + 40);
     }
 }
 
-window.addEventListener("mousedown", () => { isPressing = true; jump(); });
-window.addEventListener("mouseup", () => isPressing = false);
-window.addEventListener("touchstart", (e) => { isPressing = true; jump(); e.preventDefault(); }, {passive: false});
-window.addEventListener("touchend", () => isPressing = false);
-window.addEventListener("keydown", (e) => { if(e.code === "Space") jump(); });
-
-// --- ADMIN FUNCTIONS ---
-const adminToggle = document.getElementById("adminToggle");
-const adminPanel = document.getElementById("adminPanel");
-const godCheck = document.getElementById("godCheck");
-const gravRange = document.getElementById("gravRange");
-
-adminToggle.onclick = () => adminPanel.style.display = "block";
-function closeAdmin() { adminPanel.style.display = "none"; }
-function addAdminCoins() { 
-    coins += 1000; 
-    localStorage.setItem("coins", coins);
-    document.getElementById("coinTotal").innerText = coins;
+function createFireEffect(x, y) {
+    for(let i=0; i<10; i++) {
+        fireParticles.push({x, y, vx: (Math.random()-0.5)*10, vy: Math.random()*5, life: 1});
+    }
 }
 
-// --- BOUCLE DE JEU ---
-document.getElementById("startBtn").onclick = () => {
-    isPlaying = true;
-    score = 0;
-    obstacles = [];
-    player.y = groundY - player.size;
-    player.vy = 0;
-    document.getElementById("ui").style.display = "none";
+window.addEventListener('mousedown', () => { isPressing = true; triggerJump(); });
+window.addEventListener('mouseup', () => isPressing = false);
+window.addEventListener('touchstart', (e) => { isPressing = true; if(isPlaying) { triggerJump(); e.preventDefault(); } }, {passive: false});
+window.addEventListener('touchend', () => isPressing = false);
+window.addEventListener('keydown', (e) => { if(e.code === "Space") { isPressing = true; triggerJump(); }});
+window.addEventListener('keyup', (e) => { if(e.code === "Space") isPressing = false; });
+
+document.getElementById('playBtn').onclick = () => {
+    isPlaying = true; score = 0; currentCoins = 0; nextSpawn = 0;
+    obstacles = []; portals = []; pillars = []; goldCoins = []; fireParticles = [];
+    player.mode = "cube"; player.y = groundY - player.size; player.vy = 0;
+    ui.style.display = "none";
 };
 
+// --- LOGIQUE JEU ---
 function update() {
     if (!isPlaying) return;
 
-    // Admin Settings
-    godMode = godCheck.checked;
-    player.jumpPower = -parseInt(gravRange.value);
+    let currentSpeed = powers.speed ? speedBase * 1.3 : speedBase;
 
     // Physique
-    player.vy += player.gravity;
+    if (player.mode === "ship") {
+        player.vy += (isPressing ? -0.85 : 0.85);
+        player.vy *= 0.95;
+        player.rot = player.vy * 3;
+    } else {
+        player.vy += player.gravity;
+        if (!player.grounded) player.rot += 7;
+    }
     player.y += player.vy;
 
-    if (player.y > groundY - player.size) {
-        player.y = groundY - player.size;
-        player.vy = 0;
-        player.grounded = true;
+    if (player.y >= groundY - player.size) {
+        player.y = groundY - player.size; player.vy = 0; player.grounded = true;
+        if(player.mode === "cube") player.rot = Math.round(player.rot/90)*90;
+    } else player.grounded = false;
+
+    if (player.y < ceilingY || player.y > groundY) { 
+        totalCoins += currentCoins;
+        localStorage.setItem("geoCoins", totalCoins);
+        updateUI();
+        isPlaying = false; ui.style.display = "flex"; 
     }
 
-    // Obstacles
+    // Spawn
     if (nextSpawn-- <= 0) {
-        obstacles.push({ x: canvas.width, w: 30, h: 40 });
+        let group = Math.floor(Math.random() * 3) + 1;
+        for(let i=0; i<group; i++) obstacles.push({x: canvas.width + (i*32), w: 32, h: 38});
+        if(Math.random() > 0.4) goldCoins.push({x: canvas.width + 100, y: groundY - 150});
         nextSpawn = 60 + Math.random() * 40;
     }
 
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-        let o = obstacles[i];
-        o.x -= 10;
-
-        // Collision
-        if (player.x < o.x + o.w && player.x + player.size > o.x && 
-            player.y + player.size > groundY - o.h) {
-            if (!godMode) {
-                isPlaying = false;
-                document.getElementById("ui").style.display = "flex";
+    // Collisions
+    [obstacles, goldCoins].forEach(list => {
+        for(let i = list.length - 1; i >= 0; i--) {
+            let o = list[i];
+            o.x -= currentSpeed;
+            if (player.x < o.x + (o.w || 25) && player.x + player.size > o.x) {
+                if (o.h) { // Mort
+                    if (player.y + player.size > groundY - o.h) { isPlaying = false; totalCoins += currentCoins; localStorage.setItem("geoCoins", totalCoins); updateUI(); ui.style.display = "flex"; }
+                } else { // Pièce
+                    if (Math.abs(player.y - o.y) < 60) { currentCoins++; list.splice(i, 1); }
+                }
             }
         }
-        if (o.x < -50) obstacles.splice(i, 1);
-    }
+    });
+
+    fireParticles.forEach((p, i) => {
+        p.x -= currentSpeed * 0.5; p.y += p.vy; p.life -= 0.05;
+        if(p.life <= 0) fireParticles.splice(i, 1);
+    });
+
+    score++;
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#111"; ctx.fillRect(0, groundY, canvas.width, 100); ctx.fillRect(0, 0, canvas.width, ceilingY);
+    ctx.strokeStyle = player.color; ctx.lineWidth = 4;
+    ctx.strokeRect(0, groundY, canvas.width, 2); ctx.strokeRect(0, ceilingY, canvas.width, 2);
 
-    // Sol
-    ctx.fillStyle = "#222";
-    ctx.fillRect(0, groundY, canvas.width, 100);
-    ctx.strokeStyle = "#00ffcc";
-    ctx.strokeRect(0, groundY, canvas.width, 2);
-
-    // Obstacles (Piques)
-    ctx.fillStyle = "red";
-    obstacles.forEach(o => {
-        ctx.beginPath();
-        ctx.moveTo(o.x, groundY);
-        ctx.lineTo(o.x + o.w/2, groundY - o.h);
-        ctx.lineTo(o.x + o.w, groundY);
-        ctx.fill();
+    // Particules de feu
+    fireParticles.forEach(p => {
+        ctx.fillStyle = `rgba(255, 68, 0, ${p.life})`;
+        ctx.fillRect(p.x, p.y, 8, 8);
     });
 
+    // Pièces
+    ctx.fillStyle = "#ffcc00";
+    goldCoins.forEach(c => { ctx.beginPath(); ctx.arc(c.x, c.y, 12, 0, Math.PI*2); ctx.fill(); });
+
+    // Obstacles
+    ctx.fillStyle = "#ff0055";
+    obstacles.forEach(o => { ctx.beginPath(); ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+16, groundY-o.h); ctx.lineTo(o.x+32, groundY); ctx.fill(); });
+
     // Joueur
-    ctx.fillStyle = "#00ffcc";
-    if (godMode) {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "red";
-    }
-    ctx.fillRect(player.x, player.y, player.size, player.size);
-    ctx.shadowBlur = 0;
+    ctx.save();
+    ctx.translate(player.x+player.size/2, player.y+player.size/2); ctx.rotate(player.rot*Math.PI/180);
+    if(powers.jump) { ctx.shadowBlur = 20; ctx.shadowColor = "#ff4400"; }
+    ctx.fillStyle = player.color; ctx.fillRect(-20,-20,40,40);
+    ctx.strokeStyle="white"; ctx.strokeRect(-20,-20,40,40);
+    ctx.restore();
 
-    update();
-    requestAnimationFrame(draw);
+    update(); requestAnimationFrame(draw);
 }
-
 draw();
+
+// Selector visages
+document.getElementById('faceSelector').onclick = (e) => {
+    const item = e.target.closest('.item');
+    if(item) {
+        document.querySelectorAll('#faceSelector .item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active'); player.face = item.dataset.face;
+    }
+};
 </script>
 </body>
 </html>
