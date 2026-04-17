@@ -3,29 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Rhythm - Portals Edition</title>
+    <title>Geometry Rhythm - Final Corrected</title>
     <style>
-        :root { --primary: #00ffcc; --ship: #ff00ff; --cube: #00ffff; }
+        :root { --primary: #00ffcc; }
+        * { box-sizing: border-box; user-select: none; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
-        canvas { display: block; }
+        canvas { display: block; width: 100vw; height: 100vh; }
         
         #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.85); z-index: 100; color: white; }
-        .container { text-align: center; padding: 30px; border: 4px solid var(--primary); border-radius: 40px; background: #0a0a0a; width: 90%; max-width: 450px; box-shadow: 0 0 60px rgba(0,255,204,0.3); }
+        .container { text-align: center; padding: 30px; border: 4px solid var(--primary); border-radius: 40px; background: #0a0a0a; width: 90%; max-width: 450px; }
         
         .selection-grid { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
         .item { width: 50px; height: 50px; border-radius: 12px; cursor: pointer; border: 2px solid #333; display: flex; align-items: center; justify-content: center; background: #1a1a1a; font-size: 24px; transition: 0.2s; }
-        .item.active { border-color: #fff; background: var(--primary); transform: translateY(-5px) scale(1.1); }
+        .item.active { border-color: #fff; background: var(--primary); color: #000; transform: scale(1.1); }
         
         button { padding: 20px; font-size: 26px; font-weight: 900; background: var(--primary); border: none; border-radius: 20px; cursor: pointer; text-transform: uppercase; color: #000; width: 100%; box-shadow: 0 6px 0 #008877; }
         button:active { transform: translateY(4px); box-shadow: none; }
+
+        #stats { position: absolute; top: 20px; left: 20px; color: white; font-size: 20px; z-index: 50; pointer-events: none; }
     </style>
 </head>
 <body>
 
+<div id="stats">PIÈCES: <span id="coinCount">0</span></div>
+
 <div id="ui">
     <div class="container">
-        <h1 style="letter-spacing: 2px; margin-bottom: 5px;">RHYTHM CRASH</h1>
-        <p style="color: #666; font-size: 12px; margin-bottom: 20px;">LANCE LA MUSIQUE DU CHAT PUIS CLIQUE SUR START</p>
+        <h1 style="margin:0; font-size: 32px;">RHYTHM CRASH</h1>
+        <p style="color:#666; font-size: 14px; margin-bottom: 20px;">LANCE LA MUSIQUE ET JOUE !</p>
         
         <div class="selection-grid" id="faceSelector">
             <div class="item active" data-face="normal">🙂</div>
@@ -41,7 +46,7 @@
             <div class="item" style="background:#0099ff" data-color="#0099ff"></div>
         </div>
         
-        <button id="playBtn">START SYNC</button>
+        <button id="playBtn">JOUER</button>
     </div>
 </div>
 
@@ -51,18 +56,15 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
+const coinDisplay = document.getElementById("coinCount");
 
-let isPlaying = false, isPressing = false, score = 0, speed = 10;
-let obstacles = [], portals = [], pillars = [], trail = [];
-let beatCounter = 0, groundY, ceilingY;
-
-// Config Rythme (140 BPM)
-const bpm = 140;
-const beatInterval = (60 / bpm) * 60; // Frames environ (60fps)
+let isPlaying = false, isPressing = false;
+let score = 0, coins = 0, speed = 10, groundY, ceilingY;
+let obstacles = [], portals = [], pillars = [], goldCoins = [];
 
 let player = {
-    x: 180, y: 0, size: 40, vy: 0, gravity: 1.0, jump: -17, 
-    rot: 0, color: "#00ffcc", face: "normal", mode: "cube", gravDir: 1
+    x: 180, y: 0, size: 40, vy: 0, gravity: 0.95, jump: -16.5, 
+    rot: 0, color: "#00ffcc", face: "normal", mode: "cube", grounded: false
 };
 
 function resize() {
@@ -72,176 +74,192 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// --- SELECTION ---
+// --- COMMANDES CORRIGÉES ---
+function triggerJump() {
+    if (isPlaying && player.grounded && player.mode === "cube") {
+        player.vy = player.jump;
+        player.grounded = false;
+    }
+}
+
+// Support Souris
+window.addEventListener('mousedown', (e) => { 
+    if(e.button === 0) { isPressing = true; triggerJump(); }
+});
+window.addEventListener('mouseup', () => isPressing = false);
+
+// Support Tactile
+window.addEventListener('touchstart', (e) => {
+    isPressing = true;
+    if (isPlaying) { triggerJump(); e.preventDefault(); }
+}, { passive: false });
+window.addEventListener('touchend', () => isPressing = false);
+
+// Support Clavier
+window.addEventListener('keydown', (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") {
+        isPressing = true; triggerJump();
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp") isPressing = false;
+});
+
+// --- CUSTOMISATION ---
 document.getElementById('faceSelector').onclick = (e) => {
-    if(e.target.dataset.face) {
+    const item = e.target.closest('.item');
+    if(item) {
         document.querySelectorAll('#faceSelector .item').forEach(i => i.classList.remove('active'));
-        e.target.classList.add('active'); player.face = e.target.dataset.face;
+        item.classList.add('active'); player.face = item.dataset.face;
     }
 };
 document.getElementById('colorSelector').onclick = (e) => {
-    if(e.target.dataset.color) {
+    const item = e.target.closest('.item');
+    if(item) {
         document.querySelectorAll('#colorSelector .item').forEach(i => i.classList.remove('active'));
-        e.target.classList.add('active'); player.color = e.target.dataset.color;
+        item.classList.add('active'); player.color = item.dataset.color;
         document.documentElement.style.setProperty('--primary', player.color);
     }
 };
 
-// --- CORE ---
 document.getElementById('playBtn').onclick = () => {
-    isPlaying = true; score = 0; obstacles = []; portals = []; pillars = []; trail = [];
-    player.mode = "cube"; player.y = groundY - player.size;
+    isPlaying = true; score = 0; coins = 0;
+    obstacles = []; portals = []; pillars = []; goldCoins = [];
+    coinDisplay.innerText = "0";
+    player.mode = "cube"; player.y = groundY - player.size; player.vy = 0; player.rot = 0;
     ui.style.display = "none";
 };
 
-window.onmousedown = () => isPressing = true;
-window.onmouseup = () => isPressing = false;
-
-function spawnRhythmObstacle() {
-    if (player.mode === "cube") {
-        // Apparition calée sur le temps
-        obstacles.push({x: canvas.width, w: 35, h: 42, type: 'bottom'});
-        if (score % 200 > 150) obstacles.push({x: canvas.width + 40, w: 35, h: 42, type: 'bottom'});
-    } else {
-        // Piliers en escalier (rythmique)
-        let wave = Math.sin(score * 0.05) * 100;
-        let gap = 180;
-        let baseH = (groundY - ceilingY) / 2 + wave;
-        pillars.push({x: canvas.width, w: 60, h: baseH - gap/2, pos: 'top'});
-        pillars.push({x: canvas.width, w: 60, h: (groundY - ceilingY) - (baseH + gap/2), pos: 'bottom'});
-    }
-}
-
+// --- LOGIQUE ---
 function update() {
     if (!isPlaying) return;
 
-    // Rythme
-    beatCounter++;
-    if (beatCounter >= beatInterval) {
-        spawnRhythmObstacle();
-        beatCounter = 0;
-    }
-
     // Physique
     if (player.mode === "ship") {
-        player.vy += (isPressing ? -0.9 : 0.9);
-        player.vy *= 0.94;
+        player.vy += (isPressing ? -0.85 : 0.85);
+        player.vy *= 0.95;
         player.rot = player.vy * 3;
     } else {
         player.vy += player.gravity;
-        if (isPressing && player.grounded) player.vy = player.jump;
         if (!player.grounded) player.rot += 7;
     }
     player.y += player.vy;
 
-    // Sol
+    // Collision Sol/Plafond
     if (player.y >= groundY - player.size) {
         player.y = groundY - player.size; player.vy = 0; player.grounded = true;
-        player.rot = Math.round(player.rot/90)*90;
+        if(player.mode === "cube") player.rot = Math.round(player.rot/90)*90;
     } else player.grounded = false;
 
-    if (player.y < ceilingY || player.y > groundY) { isPlaying = false; ui.style.display = "flex"; }
+    if (player.y < ceilingY || player.y > groundY) { 
+        isPlaying = false; ui.style.display = "flex"; 
+    }
 
-    // Objets & Portails
-    [obstacles, pillars].forEach(list => {
-        list.forEach((obj, i) => {
-            obj.x -= speed;
-            if (player.x < obj.x + obj.w && player.x + player.size > obj.x) {
-                let yMin = (obj.pos==='top'||obj.type==='top') ? ceilingY : groundY-obj.h;
-                let yMax = (obj.pos==='top'||obj.type==='top') ? ceilingY+obj.h : groundY;
-                if (player.y < yMax && player.y + player.size > yMin) { isPlaying = false; ui.style.display = "flex"; }
+    // Spawning (Rythmé par le score)
+    if (score % 65 === 0) {
+        if (player.mode === "cube") {
+            obstacles.push({x: canvas.width, w: 35, h: 42});
+            if(Math.random() > 0.6) goldCoins.push({x: canvas.width + 100, y: groundY - 140});
+        } else {
+            let mid = (groundY + ceilingY) / 2 + Math.sin(score * 0.05) * 80;
+            pillars.push({x: canvas.width, w: 60, h: mid - 90 - ceilingY, pos: 'top'});
+            pillars.push({x: canvas.width, w: 60, h: groundY - (mid + 90), pos: 'bottom'});
+            goldCoins.push({x: canvas.width + 30, y: mid});
+        }
+    }
+
+    if (score % 900 === 0 && score > 0) portals.push({x: canvas.width, type: player.mode==="cube"?"ship":"cube"});
+
+    // Gestion des listes d'objets
+    [obstacles, pillars, goldCoins, portals].forEach(list => {
+        for(let i = list.length - 1; i >= 0; i--) {
+            let o = list[i];
+            o.x -= speed;
+
+            // Collision Box
+            if (player.x < o.x + (o.w || 30) && player.x + player.size > o.x) {
+                if (o.h) { // Mort
+                    let yMin = (o.pos === 'top') ? ceilingY : groundY - o.h;
+                    let yMax = (o.pos === 'top') ? ceilingY + o.h : groundY;
+                    if (player.y < yMax && player.y + player.size > yMin) { isPlaying = false; ui.style.display = "flex"; }
+                } else if (o.type) { // Portail
+                    player.mode = o.type; list.splice(i, 1);
+                } else if (o.y) { // Pièce
+                    if (player.y < o.y + 20 && player.y + player.size > o.y - 20) {
+                        coins++; coinDisplay.innerText = coins; list.splice(i, 1);
+                    }
+                }
             }
-        });
-    });
-
-    if (score % 800 === 0 && score > 0) portals.push({x: canvas.width, type: player.mode==="cube"?"ship":"cube"});
-    portals.forEach((p, i) => {
-        p.x -= speed;
-        if (player.x + player.size > p.x && player.x < p.x + 40) {
-            player.mode = p.type; portals.splice(i, 1);
+            if (o.x < -100) list.splice(i, 1);
         }
     });
-
-    // Trail (Traînée)
-    trail.push({x: player.x, y: player.y + player.size/2});
-    if (trail.length > 15) trail.shift();
 
     score++;
 }
 
 function draw() {
-    ctx.fillStyle = "#000"; ctx.fillRect(0,0,canvas.width, canvas.height);
+    ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Grille de fond qui pulse avec le rythme
-    let pulse = Math.sin(score * 0.1) * 2;
-    ctx.strokeStyle = `rgba(0, 255, 204, ${0.05 + pulse * 0.01})`;
-    for(let i=-(score*speed)%100; i<canvas.width; i+=100) {
-        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-    }
-
-    // Sols Néon
-    ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+    // Décor
     ctx.fillStyle = "#111"; ctx.fillRect(0, groundY, canvas.width, 100); ctx.fillRect(0, 0, canvas.width, ceilingY);
-    ctx.fillStyle = player.color; ctx.fillRect(0, groundY, canvas.width, 4); ctx.fillRect(0, ceilingY-4, canvas.width, 4);
-
-    // Traînée
-    ctx.beginPath();
     ctx.strokeStyle = player.color; ctx.lineWidth = 4;
-    trail.forEach((t, i) => {
-        ctx.globalAlpha = i / trail.length;
-        i === 0 ? ctx.moveTo(t.x, t.y) : ctx.lineTo(t.x, t.y);
-    });
-    ctx.stroke(); ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(canvas.width, groundY); 
+    ctx.moveTo(0, ceilingY); ctx.lineTo(canvas.width, ceilingY); ctx.stroke();
 
-    // Portails Stylisés
-    portals.forEach(p => {
-        let col = p.type === "ship" ? "#ff00ff" : "#00ffff";
-        ctx.shadowBlur = 20; ctx.shadowColor = col;
-        ctx.fillStyle = col;
-        // Anneau du portail
-        ctx.beginPath(); ctx.ellipse(p.x+20, (groundY+ceilingY)/2, 25, (groundY-ceilingY)/2 - 20, 0, 0, Math.PI*2);
-        ctx.fill();
-        // Particules de portail
-        for(let j=0; j<5; j++) {
-            ctx.fillRect(p.x + Math.random()*40, ceilingY + Math.random()*(groundY-ceilingY), 4, 4);
-        }
-        ctx.shadowBlur = 0;
+    // Pièces
+    ctx.fillStyle = "#ffcc00"; ctx.shadowBlur = 10; ctx.shadowColor = "#ffcc00";
+    goldCoins.forEach(c => { ctx.beginPath(); ctx.arc(c.x, c.y, 12, 0, Math.PI*2); ctx.fill(); });
+    ctx.shadowBlur = 0;
+
+    // Obstacles
+    ctx.fillStyle = "#ff0055";
+    obstacles.forEach(o => {
+        ctx.beginPath(); ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+o.w/2, groundY-o.h); ctx.lineTo(o.x+o.w, groundY); ctx.fill();
     });
 
-    // Piliers et Piques
+    // Piliers
     ctx.fillStyle = "#1a1a1a"; ctx.strokeStyle = player.color;
     pillars.forEach(p => {
-        let y = p.pos === 'top' ? ceilingY : groundY-p.h;
+        let y = p.pos === 'top' ? ceilingY : groundY - p.h;
         ctx.fillRect(p.x, y, p.w, p.h); ctx.strokeRect(p.x, y, p.w, p.h);
     });
 
-    ctx.fillStyle = "#ff0055"; ctx.shadowBlur = 10; ctx.shadowColor = "#ff0055";
-    obstacles.forEach(o => {
-        ctx.beginPath();
-        ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+o.w/2, groundY-o.h); ctx.lineTo(o.x+o.w, groundY);
-        ctx.fill();
+    // Portails Stylisés
+    portals.forEach(p => {
+        ctx.fillStyle = p.type === "ship" ? "#ff00ff" : "#00ffff";
+        ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(p.x, ceilingY + 10, 30, groundY - ceilingY - 20);
+        ctx.shadowBlur = 0;
     });
 
     // Joueur
     ctx.save();
     ctx.translate(player.x + player.size/2, player.y + player.size/2);
     ctx.rotate(player.rot * Math.PI / 180);
-    ctx.shadowBlur = 15; ctx.shadowColor = player.color;
     ctx.fillStyle = player.color;
+    ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+    
     if(player.mode === "cube") {
         ctx.fillRect(-20, -20, 40, 40);
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+        ctx.strokeStyle = "white"; ctx.strokeRect(-20, -20, 40, 40);
     } else {
         ctx.beginPath(); ctx.moveTo(-20, 15); ctx.lineTo(25, 0); ctx.lineTo(-20, -15); ctx.fill();
     }
-    
+
     // Visage
-    ctx.fillStyle = "rgba(0,0,0,0.7)";
-    if(player.face === "angry") { ctx.fillRect(-12, -10, 8, 4); ctx.fillRect(4, -10, 8, 4); ctx.fillRect(-10, 8, 20, 2); }
-    else if(player.face === "cool") { ctx.fillRect(-15, -12, 30, 8); }
-    else if(player.face === "wow") { ctx.fillRect(-10, -10, 5, 10); ctx.fillRect(5, -10, 5, 10); ctx.fillRect(-5, 5, 10, 8); }
-    else { ctx.fillRect(-12, -10, 6, 6); ctx.fillRect(6, -10, 6, 6); ctx.fillRect(-8, 8, 16, 2); }
-    
+    ctx.fillStyle = "rgba(0,0,0,0.8)";
+    if(player.face === "angry") {
+        ctx.fillRect(-12, -10, 8, 3); ctx.fillRect(4, -10, 8, 3);
+        ctx.fillRect(-10, 8, 20, 2);
+    } else if(player.face === "cool") {
+        ctx.fillRect(-15, -12, 30, 8);
+    } else if(player.face === "wow") {
+        ctx.fillRect(-10, -10, 6, 8); ctx.fillRect(4, -10, 6, 8);
+        ctx.fillRect(-6, 6, 12, 6);
+    } else {
+        ctx.fillRect(-12, -10, 6, 6); ctx.fillRect(6, -10, 6, 6);
+        ctx.fillRect(-8, 8, 16, 2);
+    }
     ctx.restore();
 
     update();
