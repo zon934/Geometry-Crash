@@ -3,26 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Crash PRO - Stable</title>
+    <title>Geometry Crash - Spike Groups</title>
     <style>
         :root { --primary: #00ffcc; }
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; font-family: 'Arial Black', sans-serif; }
         canvas { display: block; width: 100vw; height: 100vh; }
         
-        /* UI FIX */
         #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 100; color: white; }
         .container { text-align: center; padding: 25px; border: 3px solid var(--primary); border-radius: 30px; background: #111; width: 90%; max-width: 450px; }
         
-        .menu-row { margin: 15px 0; text-align: left; }
-        label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--primary); }
-        select { background: #222; color: white; border: 2px solid #444; padding: 12px; border-radius: 10px; font-family: inherit; width: 100%; font-size: 16px; cursor: pointer; }
+        .menu-row { margin: 15px 0; }
+        select { background: #222; color: white; border: 2px solid #444; padding: 12px; border-radius: 10px; width: 100%; font-size: 16px; font-family: inherit; }
         
-        button { padding: 18px; font-size: 22px; font-weight: 900; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; color: #000; width: 100%; margin-top: 10px; }
+        button { padding: 18px; font-size: 22px; font-weight: 900; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; color: #000; width: 100%; }
         
         .colors { display: flex; gap: 15px; margin: 20px 0; justify-content: center; }
-        .dot { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
-        .dot.active { border-color: white; transform: scale(1.15); box-shadow: 0 0 15px var(--primary); }
+        .dot { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; }
+        .dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 15px var(--primary); }
 
         #rotate-message { display: none; position: fixed; inset: 0; background: #000; color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
         @media (orientation: portrait) { #rotate-message { display: flex; } }
@@ -34,16 +32,15 @@
 
 <div id="ui">
     <div class="container">
-        <h1 id="msg">GEO CRASH PRO</h1>
-        <div id="best-score" style="margin-bottom:10px; color:#888;">Record: 0</div>
+        <h1 id="msg">GEO CRASH</h1>
+        <div id="best-score" style="color:#888; margin-bottom: 10px;">Record: 0</div>
         
         <div class="menu-row">
-            <label>DIFFICULTÉ</label>
             <select id="levelSelect">
-                <option value="facile">FACILE</option>
-                <option value="moyen" selected>MOYEN</option>
-                <option value="difficile">DIFFICILE</option>
-                <option value="impossible">IMPOSSIBLE</option>
+                <option value="facile">NIVEAU : FACILE</option>
+                <option value="moyen" selected>NIVEAU : MOYEN</option>
+                <option value="difficile">NIVEAU : DIFFICILE</option>
+                <option value="impossible">NIVEAU : IMPOSSIBLE</option>
             </select>
         </div>
 
@@ -65,14 +62,12 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
 const playBtn = document.getElementById("playBtn");
-const levelSelect = document.getElementById("levelSelect");
 
 let isPlaying = false, isPressing = false;
-let groundY, ceilingY, score = 0, speed = 8, shake = 0;
+let groundY, ceilingY, score = 0, speed = 9, shake = 0;
 let obstacles = [], portals = [], pillars = [];
-let nextSpawn = 0, nextPortal = 500;
+let nextSpawn = 0, nextPortal = 600;
 
-// Stats
 let highScore = localStorage.getItem("geoCrashScore") || 0;
 let deaths = parseInt(localStorage.getItem("geoCrashDeaths")) || 0;
 document.getElementById("best-score").innerText = `Record: ${highScore}`;
@@ -83,22 +78,22 @@ let player = {
     mode: "cube", gravDir: 1 
 };
 
+// Vitesse normale pour tout le monde, seule la fréquence change légèrement
 const diffSettings = {
-    facile: { speed: 6, spawnRate: 60 },
-    moyen: { speed: 8.5, spawnRate: 40 },
-    difficile: { speed: 11, spawnRate: 30 },
-    impossible: { speed: 14, spawnRate: 20 }
+    facile: { spawnMin: 70, spawnMax: 90 },
+    moyen: { spawnMin: 50, spawnMax: 70 },
+    difficile: { spawnMin: 35, spawnMax: 50 },
+    impossible: { spawnMin: 25, spawnMax: 35 }
 };
 
 function resize() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     groundY = canvas.height - 80; ceilingY = 80;
-    if(!isPlaying) player.y = groundY - player.size;
 }
 window.addEventListener('resize', resize);
 resize();
 
-// --- GESTION COULEURS ---
+// --- COULEURS ---
 document.querySelectorAll('.dot').forEach(dot => {
     dot.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -109,23 +104,13 @@ document.querySelectorAll('.dot').forEach(dot => {
     });
 });
 
-// --- LOGIQUE DE JEU ---
-function jump() {
-    if (player.grounded) {
-        player.vy = player.jump * player.gravDir;
-        player.grounded = false;
-    }
-}
-
+// --- JEU ---
 playBtn.addEventListener('click', (e) => {
-    e.preventDefault();
     e.stopPropagation();
     deaths++;
     localStorage.setItem("geoCrashDeaths", deaths);
     
-    // Config initiale
-    const config = diffSettings[levelSelect.value];
-    speed = config.speed;
+    speed = 9; // Vitesse normale fixe
     score = 0; obstacles = []; portals = []; pillars = [];
     player.vy = 0; player.rot = 0; player.mode = "cube"; player.gravDir = 1;
     player.y = groundY - player.size;
@@ -134,22 +119,28 @@ playBtn.addEventListener('click', (e) => {
     ui.style.display = "none";
 });
 
-// Empêcher le saut de se déclencher sur le clic du bouton
-window.addEventListener('mousedown', (e) => { if(isPlaying) isPressing = true; if(isPlaying && player.mode === "cube") jump(); });
+window.addEventListener('mousedown', () => { if(isPlaying) { isPressing = true; if(player.mode === "cube") jump(); }});
 window.addEventListener('mouseup', () => isPressing = false);
 window.addEventListener('touchstart', (e) => { 
-    if(isPlaying) { isPressing = true; if(player.mode === "cube") jump(); e.preventDefault(); }
+    if(isPlaying && e.target.tagName !== "BUTTON") { isPressing = true; if(player.mode === "cube") jump(); e.preventDefault(); }
 }, {passive: false});
 window.addEventListener('touchend', () => isPressing = false);
 
+function jump() {
+    if (player.grounded) {
+        player.vy = player.jump * player.gravDir;
+        player.grounded = false;
+    }
+}
+
 function gameOver() {
     isPlaying = false;
-    shake = 25;
+    shake = 20;
     if (Math.floor(score/10) > highScore) {
         highScore = Math.floor(score/10);
         localStorage.setItem("geoCrashScore", highScore);
     }
-    document.getElementById("msg").innerText = "SCORE : " + Math.floor(score/10);
+    document.getElementById("msg").innerText = "TENTATIVE " + deaths;
     document.getElementById("best-score").innerText = `Record: ${highScore}`;
     ui.style.display = "flex";
 }
@@ -157,7 +148,6 @@ function gameOver() {
 function update() {
     if (!isPlaying) return;
 
-    // Physique
     if (player.mode === "ship") {
         player.vy += (isPressing ? -0.8 : 0.8) * player.gravDir;
         player.vy *= 0.95;
@@ -169,52 +159,55 @@ function update() {
     player.y += player.vy;
 
     // Collisions Sols
-    if (player.gravDir === 1) {
-        if (player.y >= groundY - player.size) { player.y = groundY - player.size; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
-        else player.grounded = false;
+    if (player.y >= groundY - player.size && player.gravDir === 1) {
+        player.y = groundY - player.size; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90;
+    } else if (player.y <= ceilingY && player.gravDir === -1) {
+        player.y = ceilingY; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90;
     } else {
-        if (player.y <= ceilingY) { player.y = ceilingY; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
-        else player.grounded = false;
+        player.grounded = false;
     }
 
     if (player.y < ceilingY - 20 || player.y > groundY + 20) gameOver();
 
-    // Spawns
+    // Spawn Obstacles (Groupes de 1 à 3)
     if (nextSpawn-- <= 0) {
-        const config = diffSettings[levelSelect.value];
+        const config = diffSettings[document.getElementById("levelSelect").value];
         if (player.mode === "cube") {
-            obstacles.push({ x: canvas.width, w: 34, h: 40, type: player.gravDir === 1 ? 'bottom' : 'top' });
+            let count = Math.floor(Math.random() * 3) + 1; // 1, 2 ou 3 piques
+            for(let i=0; i<count; i++) {
+                obstacles.push({ x: canvas.width + (i * 32), w: 32, h: 38, type: player.gravDir === 1 ? 'bottom' : 'top' });
+            }
         } else {
-            let gap = 170;
+            let gap = 180;
             let h = 40 + Math.random() * (groundY - ceilingY - gap - 40);
             pillars.push({ x: canvas.width, w: 60, h: h, pos: 'top' });
             pillars.push({ x: canvas.width, w: 60, h: (groundY - ceilingY) - h - gap, pos: 'bottom' });
         }
-        nextSpawn = config.spawnRate + Math.random() * 20;
+        nextSpawn = config.spawnMin + Math.random() * (config.spawnMax - config.spawnMin);
     }
 
     if (score > nextPortal) {
-        portals.push({ x: canvas.width, type: player.mode === "cube" ? "ship" : "cube", grav: Math.random() > 0.7 ? -player.gravDir : player.gravDir });
-        nextPortal = score + 1000;
+        portals.push({ x: canvas.width, type: player.mode === "cube" ? "ship" : "cube", grav: Math.random() > 0.8 ? -player.gravDir : player.gravDir });
+        nextPortal = score + 1200;
     }
 
     // Collisions
-    [...obstacles, ...portals, ...pillars].forEach((obj, index) => {
+    [...obstacles, ...portals, ...pillars].forEach((obj) => {
         obj.x -= speed;
-        let margin = 8;
-        if (player.x + player.size - margin > obj.x && player.x + margin < obj.x + (obj.w || 35)) {
-            if (obj.h) { // Obstacle/Pilier
+        let m = 8; // Marge d'erreur
+        if (player.x + player.size - m > obj.x && player.x + m < obj.x + (obj.w || 30)) {
+            if (obj.h) {
                 let yMin = (obj.type === 'top' || obj.pos === 'top') ? ceilingY : groundY - obj.h;
                 let yMax = (obj.type === 'top' || obj.pos === 'top') ? ceilingY + obj.h : groundY;
-                if (player.y + player.size - margin > yMin && player.y + margin < yMax) gameOver();
-            } else { // Portail
+                if (player.y + player.size - m > yMin && player.y + m < yMax) gameOver();
+            } else {
                 player.mode = obj.type; player.gravDir = obj.grav;
                 portals.splice(portals.indexOf(obj), 1);
             }
         }
     });
 
-    speed += 0.001; score++;
+    score++;
 }
 
 function draw() {
@@ -232,7 +225,7 @@ function draw() {
     ctx.fillStyle = player.color; ctx.fillRect(0, groundY, canvas.width, 2); ctx.fillRect(0, ceilingY, canvas.width, 2);
 
     pillars.forEach(p => {
-        ctx.fillStyle = "#181818"; ctx.strokeStyle = player.color;
+        ctx.fillStyle = "#151515"; ctx.strokeStyle = player.color;
         let y = p.pos === 'top' ? ceilingY : groundY - p.h;
         ctx.fillRect(p.x, y, p.w, p.h); ctx.strokeRect(p.x, y, p.w, p.h);
     });
@@ -256,8 +249,8 @@ function draw() {
     ctx.fillStyle = "#ff0055";
     obstacles.forEach(o => {
         ctx.beginPath();
-        if(o.type === 'bottom') { ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+17, groundY-o.h); ctx.lineTo(o.x+34, groundY); }
-        else { ctx.moveTo(o.x, ceilingY); ctx.lineTo(o.x+17, ceilingY+o.h); ctx.lineTo(o.x+34, ceilingY); }
+        if(o.type === 'bottom') { ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+16, groundY-o.h); ctx.lineTo(o.x+32, groundY); }
+        else { ctx.moveTo(o.x, ceilingY); ctx.lineTo(o.x+16, ceilingY+o.h); ctx.lineTo(o.x+32, ceilingY); }
         ctx.fill();
     });
 
