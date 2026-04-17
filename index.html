@@ -3,37 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Geometry Crash ULTIMATE PRO</title>
+    <title>Geometry Crash PRO - Stable</title>
     <style>
         :root { --primary: #00ffcc; }
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; font-family: 'Arial Black', sans-serif; position: fixed; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #050505; font-family: 'Arial Black', sans-serif; }
         canvas { display: block; width: 100vw; height: 100vh; }
-        #ui { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.85); z-index: 10; color: white; transition: opacity 0.3s; }
-        .container { text-align: center; padding: 30px; border: 3px solid var(--primary); border-radius: 30px; background: #111; width: 85%; max-width: 400px; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        button { padding: 18px 60px; font-size: 24px; font-weight: 900; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; color: #000; margin-top: 20px; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .colors { display: flex; gap: 10px; margin: 20px 0; justify-content: center; }
-        .dot { width: 35px; height: 35px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; }
-        .dot.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 15px currentColor; }
-        #rotate-message { display: none; position: fixed; inset: 0; background: #000; color: white; z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
+        
+        /* UI FIX */
+        #ui { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 100; color: white; }
+        .container { text-align: center; padding: 25px; border: 3px solid var(--primary); border-radius: 30px; background: #111; width: 90%; max-width: 450px; }
+        
+        .menu-row { margin: 15px 0; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; color: var(--primary); }
+        select { background: #222; color: white; border: 2px solid #444; padding: 12px; border-radius: 10px; font-family: inherit; width: 100%; font-size: 16px; cursor: pointer; }
+        
+        button { padding: 18px; font-size: 22px; font-weight: 900; background: var(--primary); border: none; border-radius: 15px; cursor: pointer; text-transform: uppercase; color: #000; width: 100%; margin-top: 10px; }
+        
+        .colors { display: flex; gap: 15px; margin: 20px 0; justify-content: center; }
+        .dot { width: 40px; height: 40px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: 0.2s; }
+        .dot.active { border-color: white; transform: scale(1.15); box-shadow: 0 0 15px var(--primary); }
+
+        #rotate-message { display: none; position: fixed; inset: 0; background: #000; color: white; z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
         @media (orientation: portrait) { #rotate-message { display: flex; } }
     </style>
 </head>
 <body>
 
-<div id="rotate-message"><h1>🔄</h1><h2>MODE PAYSAGE REQUIS</h2></div>
+<div id="rotate-message"><h1>🔄</h1><h2>MODE PAYSAGE</h2></div>
 
 <div id="ui">
     <div class="container">
         <h1 id="msg">GEO CRASH PRO</h1>
-        <div id="best-score">Record: 0</div>
+        <div id="best-score" style="margin-bottom:10px; color:#888;">Record: 0</div>
+        
+        <div class="menu-row">
+            <label>DIFFICULTÉ</label>
+            <select id="levelSelect">
+                <option value="facile">FACILE</option>
+                <option value="moyen" selected>MOYEN</option>
+                <option value="difficile">DIFFICILE</option>
+                <option value="impossible">IMPOSSIBLE</option>
+            </select>
+        </div>
+
         <div class="colors">
             <div class="dot active" style="background:#00ffcc" data-color="#00ffcc"></div>
             <div class="dot" style="background:#ffea00" data-color="#ffea00"></div>
             <div class="dot" style="background:#ff0077" data-color="#ff0077"></div>
             <div class="dot" style="background:#0099ff" data-color="#0099ff"></div>
         </div>
+        
         <button id="playBtn">JOUER</button>
     </div>
 </div>
@@ -45,14 +65,14 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
 const playBtn = document.getElementById("playBtn");
+const levelSelect = document.getElementById("levelSelect");
 
-// --- État du Jeu ---
 let isPlaying = false, isPressing = false;
-let groundY, ceilingY, score = 0, speed = 8, shake = 0, bgOffset = 0;
-let obstacles = [], portals = [];
+let groundY, ceilingY, score = 0, speed = 8, shake = 0;
+let obstacles = [], portals = [], pillars = [];
 let nextSpawn = 0, nextPortal = 500;
 
-// Statistiques (Sauvegardées)
+// Stats
 let highScore = localStorage.getItem("geoCrashScore") || 0;
 let deaths = parseInt(localStorage.getItem("geoCrashDeaths")) || 0;
 document.getElementById("best-score").innerText = `Record: ${highScore}`;
@@ -63,34 +83,33 @@ let player = {
     mode: "cube", gravDir: 1 
 };
 
+const diffSettings = {
+    facile: { speed: 6, spawnRate: 60 },
+    moyen: { speed: 8.5, spawnRate: 40 },
+    difficile: { speed: 11, spawnRate: 30 },
+    impossible: { speed: 14, spawnRate: 20 }
+};
+
 function resize() {
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     groundY = canvas.height - 80; ceilingY = 80;
+    if(!isPlaying) player.y = groundY - player.size;
 }
 window.addEventListener('resize', resize);
 resize();
 
-// --- Contrôles ---
-const inputStart = (e) => { 
-    isPressing = true; 
-    if(isPlaying && player.mode === "cube") jump(); 
-};
-const inputEnd = () => { isPressing = false; };
-
-window.addEventListener('mousedown', inputStart);
-window.addEventListener('mouseup', inputEnd);
-window.addEventListener('touchstart', (e) => { 
-    if(e.target.tagName !== "BUTTON") { inputStart(); e.preventDefault(); } 
-}, {passive: false});
-window.addEventListener('touchend', inputEnd);
-
-playBtn.addEventListener('click', (e) => { 
-    e.stopPropagation(); 
-    deaths++; // Nouvelle tentative
-    localStorage.setItem("geoCrashDeaths", deaths);
-    start(); 
+// --- GESTION COULEURS ---
+document.querySelectorAll('.dot').forEach(dot => {
+    dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        player.color = dot.dataset.color;
+        document.documentElement.style.setProperty('--primary', player.color);
+    });
 });
 
+// --- LOGIQUE DE JEU ---
 function jump() {
     if (player.grounded) {
         player.vy = player.jump * player.gravDir;
@@ -98,160 +117,154 @@ function jump() {
     }
 }
 
-function start() {
-    isPlaying = true; score = 0; speed = 8; obstacles = []; portals = [];
+playBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deaths++;
+    localStorage.setItem("geoCrashDeaths", deaths);
+    
+    // Config initiale
+    const config = diffSettings[levelSelect.value];
+    speed = config.speed;
+    score = 0; obstacles = []; portals = []; pillars = [];
     player.vy = 0; player.rot = 0; player.mode = "cube"; player.gravDir = 1;
-    ui.style.opacity = "0"; setTimeout(() => ui.style.display = "none", 300);
-}
+    player.y = groundY - player.size;
+    
+    isPlaying = true;
+    ui.style.display = "none";
+});
+
+// Empêcher le saut de se déclencher sur le clic du bouton
+window.addEventListener('mousedown', (e) => { if(isPlaying) isPressing = true; if(isPlaying && player.mode === "cube") jump(); });
+window.addEventListener('mouseup', () => isPressing = false);
+window.addEventListener('touchstart', (e) => { 
+    if(isPlaying) { isPressing = true; if(player.mode === "cube") jump(); e.preventDefault(); }
+}, {passive: false});
+window.addEventListener('touchend', () => isPressing = false);
 
 function gameOver() {
-    isPlaying = false; 
-    shake = 20; 
+    isPlaying = false;
+    shake = 25;
     if (Math.floor(score/10) > highScore) {
         highScore = Math.floor(score/10);
         localStorage.setItem("geoCrashScore", highScore);
     }
-    document.getElementById("msg").innerText = "SCORE: " + Math.floor(score/10);
+    document.getElementById("msg").innerText = "SCORE : " + Math.floor(score/10);
     document.getElementById("best-score").innerText = `Record: ${highScore}`;
-    ui.style.display = "flex"; ui.style.opacity = "1";
+    ui.style.display = "flex";
 }
 
 function update() {
     if (!isPlaying) return;
 
-    // Physique Cube vs Vaisseau
+    // Physique
     if (player.mode === "ship") {
-        let shipAccel = isPressing ? -0.7 : 0.7;
-        player.vy += shipAccel * player.gravDir;
-        player.vy *= 0.96;
+        player.vy += (isPressing ? -0.8 : 0.8) * player.gravDir;
+        player.vy *= 0.95;
         player.rot = player.vy * 2;
     } else {
         player.vy += player.gravity * player.gravDir;
         if (!player.grounded) player.rot += 6 * player.gravDir;
     }
-
     player.y += player.vy;
 
-    // Limites de collision
-    let limitDown = groundY - player.size;
-    let limitUp = ceilingY;
-
-    if (player.gravDir === 1) { 
-        if (player.y >= limitDown) { player.y = limitDown; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
-        else if (player.y <= limitUp && player.mode === "ship") { player.y = limitUp; player.vy = 0; }
-        else { player.grounded = false; }
-    } else { 
-        if (player.y <= limitUp) { player.y = limitUp; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
-        else if (player.y >= limitDown && player.mode === "ship") { player.y = limitDown; player.vy = 0; }
-        else { player.grounded = false; }
+    // Collisions Sols
+    if (player.gravDir === 1) {
+        if (player.y >= groundY - player.size) { player.y = groundY - player.size; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
+        else player.grounded = false;
+    } else {
+        if (player.y <= ceilingY) { player.y = ceilingY; player.vy = 0; player.grounded = true; player.rot = Math.round(player.rot/90)*90; }
+        else player.grounded = false;
     }
 
-    // Gestion Obstacles & Portails
+    if (player.y < ceilingY - 20 || player.y > groundY + 20) gameOver();
+
+    // Spawns
     if (nextSpawn-- <= 0) {
-        obstacles.push({ x: canvas.width, w: 34, h: 38, type: player.gravDir === 1 ? 'bottom' : 'top' });
-        nextSpawn = 35 + Math.random() * 30;
+        const config = diffSettings[levelSelect.value];
+        if (player.mode === "cube") {
+            obstacles.push({ x: canvas.width, w: 34, h: 40, type: player.gravDir === 1 ? 'bottom' : 'top' });
+        } else {
+            let gap = 170;
+            let h = 40 + Math.random() * (groundY - ceilingY - gap - 40);
+            pillars.push({ x: canvas.width, w: 60, h: h, pos: 'top' });
+            pillars.push({ x: canvas.width, w: 60, h: (groundY - ceilingY) - h - gap, pos: 'bottom' });
+        }
+        nextSpawn = config.spawnRate + Math.random() * 20;
     }
 
     if (score > nextPortal) {
-        let type = player.mode === "cube" ? "ship" : "cube";
-        let grav = Math.random() > 0.5 ? -player.gravDir : player.gravDir;
-        portals.push({ x: canvas.width, type, grav });
-        nextPortal = score + 800 + Math.random() * 600;
+        portals.push({ x: canvas.width, type: player.mode === "cube" ? "ship" : "cube", grav: Math.random() > 0.7 ? -player.gravDir : player.gravDir });
+        nextPortal = score + 1000;
     }
 
-    [...obstacles, ...portals].forEach((obj, i) => {
+    // Collisions
+    [...obstacles, ...portals, ...pillars].forEach((obj, index) => {
         obj.x -= speed;
-        if (player.x + player.size - 8 > obj.x && player.x + 8 < obj.x + 40) {
-            if (obj.type === 'bottom' && player.y + player.size - 8 > groundY - obj.h) gameOver();
-            if (obj.type === 'top' && player.y + 8 < ceilingY + obj.h) gameOver();
-            if (obj.type === 'ship' || obj.type === 'cube') {
+        let margin = 8;
+        if (player.x + player.size - margin > obj.x && player.x + margin < obj.x + (obj.w || 35)) {
+            if (obj.h) { // Obstacle/Pilier
+                let yMin = (obj.type === 'top' || obj.pos === 'top') ? ceilingY : groundY - obj.h;
+                let yMax = (obj.type === 'top' || obj.pos === 'top') ? ceilingY + obj.h : groundY;
+                if (player.y + player.size - margin > yMin && player.y + margin < yMax) gameOver();
+            } else { // Portail
                 player.mode = obj.type; player.gravDir = obj.grav;
                 portals.splice(portals.indexOf(obj), 1);
             }
         }
     });
 
-    speed += 0.0012; bgOffset = (bgOffset + speed) % 100; score++;
+    speed += 0.001; score++;
 }
 
 function draw() {
     ctx.save();
-    if (shake > 0) { ctx.translate(Math.random()*shake - shake/2, Math.random()*shake - shake/2); shake *= 0.9; }
-    
-    // Fond Noir
+    if (shake > 0) { ctx.translate(Math.random()*shake-shake/2, Math.random()*shake-shake/2); shake *= 0.9; }
     ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // --- COMPTEUR DE MORT EN ARRIÈRE-PLAN ---
     if (isPlaying) {
-        ctx.textAlign = "center";
-        ctx.font = "bold 80px Arial Black";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-        ctx.fillText("TENTATIVE " + deaths, canvas.width / 2, canvas.height / 2 + 30);
+        ctx.textAlign = "center"; ctx.font = "bold 80px Arial";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        ctx.fillText("TENTATIVE " + deaths, canvas.width/2, canvas.height/2 + 30);
     }
 
-    // Grille décorative
-    ctx.strokeStyle = "#111";
-    for(let i=-bgOffset; i<canvas.width; i+=100) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
-    
-    // Sols et Plafonds
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, groundY, canvas.width, 80);
-    ctx.fillRect(0, 0, canvas.width, ceilingY);
-    ctx.fillStyle = player.color; ctx.shadowBlur = 15; ctx.shadowColor = player.color;
-    ctx.fillRect(0, groundY, canvas.width, 2); ctx.fillRect(0, ceilingY, canvas.width, 2);
+    ctx.fillStyle = "#111"; ctx.fillRect(0, groundY, canvas.width, 80); ctx.fillRect(0, 0, canvas.width, ceilingY);
+    ctx.fillStyle = player.color; ctx.fillRect(0, groundY, canvas.width, 2); ctx.fillRect(0, ceilingY, canvas.width, 2);
 
-    // Dessin Portails
+    pillars.forEach(p => {
+        ctx.fillStyle = "#181818"; ctx.strokeStyle = player.color;
+        let y = p.pos === 'top' ? ceilingY : groundY - p.h;
+        ctx.fillRect(p.x, y, p.w, p.h); ctx.strokeRect(p.x, y, p.w, p.h);
+    });
+
     portals.forEach(p => {
         ctx.fillStyle = p.type === "ship" ? "#ff00ff" : "#00ffff";
-        ctx.shadowColor = ctx.fillStyle;
         ctx.fillRect(p.x, ceilingY, 30, groundY - ceilingY);
     });
 
-    // Dessin Joueur
     ctx.save();
     ctx.translate(player.x + player.size/2, player.y + player.size/2);
     ctx.rotate(player.rot * Math.PI / 180);
-    ctx.fillStyle = player.color; ctx.shadowBlur = 15; ctx.shadowColor = player.color;
+    ctx.fillStyle = player.color;
     if(player.mode === "ship") {
-        ctx.beginPath(); ctx.moveTo(-20, 15); ctx.lineTo(25, 0); ctx.lineTo(-20, -15); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = "white"; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-20, 15); ctx.lineTo(25, 0); ctx.lineTo(-20, -15); ctx.fill();
     } else {
-        ctx.fillRect(-20, -20, 40, 40);
-        ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(-20, -20, 40, 40);
+        ctx.fillRect(-20, -20, 40, 40); ctx.strokeStyle = "white"; ctx.strokeRect(-20, -20, 40, 40);
     }
     ctx.restore();
 
-    // Dessin Obstacles
-    ctx.shadowBlur = 10; ctx.shadowColor = "#ff0055"; ctx.fillStyle = "#ff0055";
+    ctx.fillStyle = "#ff0055";
     obstacles.forEach(o => {
         ctx.beginPath();
-        if(o.type === 'bottom') {
-            ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+17, groundY-o.h); ctx.lineTo(o.x+34, groundY);
-        } else {
-            ctx.moveTo(o.x, ceilingY); ctx.lineTo(o.x+17, ceilingY+o.h); ctx.lineTo(o.x+34, ceilingY);
-        }
+        if(o.type === 'bottom') { ctx.moveTo(o.x, groundY); ctx.lineTo(o.x+17, groundY-o.h); ctx.lineTo(o.x+34, groundY); }
+        else { ctx.moveTo(o.x, ceilingY); ctx.lineTo(o.x+17, ceilingY+o.h); ctx.lineTo(o.x+34, ceilingY); }
         ctx.fill();
     });
-
-    // Barre de progression
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255,255,255,0.1)"; ctx.fillRect(canvas.width*0.25, 35, canvas.width*0.5, 8);
-    ctx.fillStyle = player.color; ctx.fillRect(canvas.width*0.25, 35, (canvas.width*0.5) * Math.min(1, (score / 3000)), 8);
 
     ctx.restore();
     update();
     requestAnimationFrame(draw);
 }
-
-// Sélecteur de couleur
-document.querySelectorAll('.dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-        document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
-        dot.classList.add('active'); player.color = dot.dataset.color;
-        document.documentElement.style.setProperty('--primary', player.color);
-    });
-});
-
 draw();
 </script>
 </body>
